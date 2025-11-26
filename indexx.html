@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Personal Hygiene Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f8ff;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+
+    header {
+      background: #0078d7;
+      color: white;
+      padding: 1rem;
+    }
+
+    section {
+      margin: 20px auto;
+      width: 80%;
+      max-width: 600px;
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    button {
+      padding: 8px 12px;
+      background: #0078d7;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #005fa3;
+    }
+
+    .task-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 6px 0;
+    }
+
+    .task-item.completed span {
+      text-decoration: line-through;
+      color: gray;
+    }
+
+    .progress-bar {
+      width: 100%;
+      background: #ddd;
+      border-radius: 10px;
+      height: 20px;
+      margin: 10px 0;
+      overflow: hidden;
+    }
+
+    #progress-fill {
+      height: 100%;
+      background: #4caf50;
+      width: 0%;
+      border-radius: 10px;
+      transition: width 0.3s ease;
+    }
+
+    footer {
+      background: #0078d7;
+      color: white;
+      padding: 10px;
+      margin-top: 30px;
+    }
+
+    input[type="text"], input[type="time"] {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      width: 60%;
+    }
+
+    label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🧼 Personal Hygiene Tracker</h1>
+  </header>
+
+  <main>
+    <section id="add-task-section">
+      <input type="text" id="new-task-input" placeholder="Add new hygiene task..." />
+      <button id="add-task-btn">Add Task</button>
+    </section>
+
+    <section id="task-list-section">
+      <h2>Today's Tasks</h2>
+      <ul id="task-list"></ul>
+    </section>
+
+    <section id="progress-section">
+      <h2>Daily Progress</h2>
+      <div class="progress-bar">
+        <div id="progress-fill"></div>
+      </div>
+      <p id="progress-text">0% completed</p>
+    </section>
+
+    <section id="reminder-section">
+      <h2>Reminders</h2>
+      <div class="reminder-controls">
+        <input type="time" id="reminder-time" />
+        <button id="set-reminder-btn">Set Reminder</button>
+      </div>
+      <p id="next-reminder">Next reminder: None</p>
+      <label>
+        <input type="checkbox" id="enable-notifications" checked />
+        Enable Notifications
+      </label>
+    </section>
+
+    <section id="history-section">
+      <h2>Task History</h2>
+      <ul id="history-list"></ul>
+    </section>
+  </main>
+
+  <footer>
+    <p>Made with 💙 to promote healthy habits</p>
+  </footer>
+
+  <script>
+    const defaultTasks = [
+      "Brushing Teeth",
+      "Bathing",
+      "Handwashing",
+      "Skincare",
+      "Nail Care",
+      "Waste Disposal",
+      "Changing Clothes",
+      "Cleaning Room"
+    ];
+
+    let tasks = JSON.parse(localStorage.getItem("tasks")) || defaultTasks.map(t => ({ name: t, done: false }));
+    let history = JSON.parse(localStorage.getItem("history")) || [];
+    let reminderTime = localStorage.getItem("reminderTime") || "";
+    let notificationsEnabled = JSON.parse(localStorage.getItem("notificationsEnabled")) ?? true;
+
+    const taskList = document.getElementById("task-list");
+    const addTaskBtn = document.getElementById("add-task-btn");
+    const newTaskInput = document.getElementById("new-task-input");
+    const progressFill = document.getElementById("progress-fill");
+    const progressText = document.getElementById("progress-text");
+    const historyList = document.getElementById("history-list");
+    const reminderInput = document.getElementById("reminder-time");
+    const setReminderBtn = document.getElementById("set-reminder-btn");
+    const nextReminderText = document.getElementById("next-reminder");
+    const enableNotifications = document.getElementById("enable-notifications");
+
+    function renderTasks() {
+      taskList.innerHTML = "";
+      tasks.forEach((task, index) => {
+        const li = document.createElement("li");
+        li.className = "task-item" + (task.done ? " completed" : "");
+        li.innerHTML = `
+          <span>${task.name}</span>
+          <button onclick="toggleTask(${index})">${task.done ? "Undo" : "Done"}</button>
+        `;
+        taskList.appendChild(li);
+      });
+      updateProgress();
+      localStorage.setItem("tasks", JSON.stringify(tasks));
+    }
+
+    function toggleTask(index) {
+      tasks[index].done = !tasks[index].done;
+      if (tasks[index].done) {
+        history.push({ name: tasks[index].name, date: new Date().toLocaleString() });
+        localStorage.setItem("history", JSON.stringify(history));
+      }
+      renderTasks();
+      renderHistory();
+    }
+
+    addTaskBtn.addEventListener("click", () => {
+      const taskName = newTaskInput.value.trim();
+      if (taskName) {
+        tasks.push({ name: taskName, done: false });
+        newTaskInput.value = "";
+        renderTasks();
+      }
+    });
+
+    function updateProgress() {
+      const total = tasks.length;
+      const completed = tasks.filter(t => t.done).length;
+      const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
+
+      progressFill.style.width = `${percent}%`;
+      progressText.textContent = `${percent}% completed`;
+    }
+
+    function renderHistory() {
+      historyList.innerHTML = "";
+      history.slice(-10).reverse().forEach(entry => {
+        const li = document.createElement("li");
+        li.textContent = `${entry.name} - ${entry.date}`;
+        historyList.appendChild(li);
+      });
+    }
+
+    setReminderBtn.addEventListener("click", () => {
+      reminderTime = reminderInput.value;
+      localStorage.setItem("reminderTime", reminderTime);
+      nextReminderText.textContent = reminderTime
+        ? `Next reminder: ${reminderTime}`
+        : "Next reminder: None";
+
+      alert("Reminder time set!");
+    });
+
+    enableNotifications.addEventListener("change", () => {
+      notificationsEnabled = enableNotifications.checked;
+      localStorage.setItem("notificationsEnabled", notificationsEnabled);
+    });
+
+    function checkReminder() {
+      if (!reminderTime || !notificationsEnabled) return;
+
+      const now = new Date();
+      const [hours, minutes] = reminderTime.split(":").map(Number);
+
+      if (
+        now.getHours() === hours &&
+        now.getMinutes() === minutes &&
+        now.getSeconds() === 0
+      ) {
+        alert("⏰ Reminder: Time to complete your hygiene tasks!");
+      }
+    }
+
+    renderTasks();
+    renderHistory();
+
+    if (reminderTime) {
+      nextReminderText.textContent = `Next reminder: ${reminderTime}`;
+    }
+
+    enableNotifications.checked = notificationsEnabled;
+
+    setInterval(checkReminder, 1000);
+  </script>
+</body>
+</html>
